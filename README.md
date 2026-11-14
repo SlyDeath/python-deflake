@@ -8,6 +8,7 @@ Repeat · Isolate · Bisect · Detect leaked state
 
 [![PyPI](https://img.shields.io/pypi/v/deflake-py?logo=pypi&logoColor=white&color=3775a9)](https://pypi.org/project/deflake-py/)
 [![CI](https://github.com/SlyDeath/python-deflake/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/SlyDeath/python-deflake/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/SlyDeath/python-deflake/graph/badge.svg?branch=main)](https://codecov.io/gh/SlyDeath/python-deflake)
 [![Python](https://img.shields.io/pypi/pyversions/deflake-py?logo=python&logoColor=white)](https://www.python.org)
 [![License: MIT](https://img.shields.io/github/license/SlyDeath/python-deflake?color=blue)](LICENSE.txt)
 

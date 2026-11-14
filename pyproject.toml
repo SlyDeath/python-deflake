@@ -49,6 +49,7 @@ dev = [
     "faker>=40.52.0",
     "pydantic>=2.14.3",
     "pytest-timeout>=2.4.0",
+    "pytest-cov>=7.1.0",
 ]
 
 [build-system]
@@ -66,6 +67,15 @@ testpaths = ["tests"]
 norecursedirs = ["fixtures"]
 markers = ["e2e: runs the deflake command on a fixture project"]
 addopts = "-n auto"
+
+[tool.coverage.run]
+source = ["deflake"]
+branch = true
+# Most of deflake runs in the test processes it starts
+patch = ["subprocess"]
+
+[tool.coverage.report]
+skip_empty = true
 
 [tool.ruff]
 line-length = 110

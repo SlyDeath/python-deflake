@@ -12,6 +12,10 @@ permissions:
 
 jobs:
   test:
+    # id-token: write lets Codecov take the coverage without a token
+    permissions:
+      contents: read
+      id-token: write
     name: Python ${{ matrix.python }} / pytest ${{ matrix.pytest }} / Django ${{ matrix.django }} / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -33,6 +37,12 @@ jobs:
             pytest: "8.0"
             django: "5.2"
             os: ubuntu-latest
+          # Coverage is measured once, on the newest stable Python
+          - python: "3.14"
+            pytest: "9"
+            django: "6.1"
+            os: ubuntu-latest
+            coverage: true
           # macOS signals processes through its own API
           - python: "3.11"
             pytest: "9"
@@ -47,7 +57,15 @@ jobs:
           python-version: ${{ matrix.python }}
       - run: uv sync --locked
       - run: uv pip install "pytest==${{ matrix.pytest }}.*" "django==${{ matrix.django }}.*"
-      - run: uv run --no-sync pytest
+      - run: uv run --no-sync pytest ${{ matrix.coverage && '--cov --cov-report=xml' || '' }}
+      - if: matrix.coverage
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          # A pull request from a fork gets no OIDC token, and Codecov takes it without one
+          use_oidc: ${{ !(github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork) }}
+          # Codecov being down does not hold back a release
+          fail_ci_if_error: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
   lint:
     runs-on: ubuntu-latest
