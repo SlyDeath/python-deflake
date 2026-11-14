@@ -57,7 +57,7 @@ def test_a_mirror_is_counted_as_the_database_it_mirrors() -> None:
     assert run.returncode == 0, run.stderr
 
 
-RECEIVERS = textwrap.dedent(
+GONE = textwrap.dedent(
     """
     import gc
 
@@ -89,7 +89,7 @@ RECEIVERS = textwrap.dedent(
 
 
 def test_a_receiver_whose_object_is_gone_was_not_disconnected() -> None:
-    run = subprocess.run([sys.executable, "-c", RECEIVERS], capture_output=True, text=True)
+    run = subprocess.run([sys.executable, "-c", GONE], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr
 
 
@@ -178,4 +178,33 @@ RECEIVERS = textwrap.dedent(
 
 def test_receivers_are_put_back_and_connected_again() -> None:
     run = subprocess.run([sys.executable, "-c", RECEIVERS], capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+
+
+SUFFIX = textwrap.dedent(
+    """
+    import django
+    from django.conf import settings
+
+    settings.configure(
+        DATABASES={
+            "default": {"ENGINE": "django.db.backends.dummy", "NAME": "shop"},
+            "files": {"ENGINE": "django.db.backends.sqlite3", "NAME": "app.db", "TEST": {"NAME": "test.db"}},
+        }
+    )
+    django.setup()
+
+    from django.db import connections
+
+    from deflake.django import databases
+
+    databases.suffix("2")
+    names = {alias: connections[alias].settings_dict["TEST"]["NAME"] for alias in connections}
+    assert names == {"default": "test_shop_2", "files": "test.db_2"}, names
+    """
+)
+
+
+def test_a_suffix_is_added_to_the_name_of_every_test_database() -> None:
+    run = subprocess.run([sys.executable, "-c", SUFFIX], capture_output=True, text=True)
     assert run.returncode == 0, run.stderr

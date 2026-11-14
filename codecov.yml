@@ -1,0 +1,4 @@
+codecov:
+  notify:
+    # Coverage comes from Linux and macOS: the status waits for both
+    after_n_builds: 2

@@ -2,6 +2,7 @@ import collections
 import concurrent.futures
 import datetime
 import decimal
+import enum
 import functools
 import importlib
 import ipaddress
@@ -621,3 +622,44 @@ def test_new_project_objects_stay_observable_after_module_metadata_changes(
 
     vars(module)["OBJ"].value = 1
     assert "metadata_objects.OBJ was changed" in detector.diff(before, detector.snapshot())
+
+
+class Colour(enum.Enum):
+    RED = 1
+    BLUE = 2
+
+
+@pytest.mark.parametrize("dumped", [False, True], ids=["parts", "dump"])
+@pytest.mark.parametrize(
+    ("make", "change"),
+    [
+        (lambda: [Colour.RED], lambda value: value.__setitem__(0, Colour.BLUE)),
+        (lambda: [bytearray(b"a")], lambda value: value[0].extend(b"b")),
+        (lambda: [{1, 2}], lambda value: value[0].add(3)),
+        (lambda: [{"key": [1]}], lambda value: value[0]["key"].append(2)),
+    ],
+    ids=["enum", "bytearray", "set", "nested"],
+)
+def test_a_change_inside_is_detected(make: Any, change: Any, dumped: bool) -> None:
+    value = make()
+    before = modules.dump(value) if dumped else fingerprint(value, 0)
+    change(value)
+    after = modules.dump(value) if dumped else fingerprint(value, 0)
+    assert after != before
+
+
+def test_an_iterator_of_itertools_in_a_dump_is_compared_by_where_it_is() -> None:
+    counter = itertools.count()
+    before = modules.dump([counter])
+    assert modules.dump([counter]) == before
+    next(counter)
+    assert modules.dump([counter]) != before
+
+
+def test_a_container_that_fails_a_look_inside_counts_by_identity() -> None:
+    class Broken(list[int]):
+        def __iter__(self) -> Any:
+            raise RuntimeError("no")
+
+    value = Broken()
+    assert fingerprint(value, 0) == ("id", id(value))

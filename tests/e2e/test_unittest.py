@@ -5,6 +5,7 @@ import os
 import shlex
 import subprocess
 import sys
+import textwrap
 from collections.abc import Callable
 from pathlib import Path
 
@@ -148,3 +149,35 @@ def test_a_line_does_not_select_a_class_of_another_module(project: Project, defl
     # Lines 6 and 8 hold tests of SharedTests in shared.py
     result = deflake("test_imported.py:6", "-n", "1", "-f", "json", cwd=root)
     assert [test["name"] for test in result.json] == ["LocalTest.test_local"], result.err
+
+
+def test_a_failed_subtest_and_an_unexpected_success_fail_the_test(project: Project, deflake: Deflake) -> None:
+    root = project("unittest")
+    (root / "test_kinds.py").write_text(
+        textwrap.dedent(
+            """
+            import unittest
+
+
+            class Kinds(unittest.TestCase):
+                def test_sub(self):
+                    for n in (1, 2):
+                        with self.subTest(n=n):
+                            self.assertEqual(n, 1)
+
+                @unittest.expectedFailure
+                def test_marked(self):
+                    pass
+            """
+        )
+    )
+    result = deflake("test_kinds.py", "-n", "1", "-f", "json", cwd=root)
+    rows = {row["name"]: row for row in result.json}
+    runs = {name: row["runs"] for name, row in rows.items()}
+    assert {name: (count["failures"], count["total"]) for name, count in runs.items()} == {
+        "Kinds.test_sub": (1, 1),
+        "Kinds.test_marked": (1, 1),
+    }, result.out
+    errors = {name: [error["message"] for error in row["errors"]] for name, row in rows.items()}
+    assert errors["Kinds.test_marked"] == ["passed, but is marked as an expected failure"], result.out
+    assert errors["Kinds.test_sub"][0].startswith("(n=2): AssertionError: 2 != 1"), result.out

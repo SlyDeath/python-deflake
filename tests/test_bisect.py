@@ -279,3 +279,62 @@ def test_a_test_another_set_took_stands_in_for_no_culprit(monkeypatch: pytest.Mo
     bisect.order = ["found", "other", "passing", "target", "victim"]
     assert bisect.group_wide_of(["target"], "victim") == ["target"]
     assert bisect.group_wide_of(["target"], "victim", ["found"]) == []
+
+
+def test_a_victim_that_fails_with_no_test_before_it_has_no_culprits(monkeypatch: pytest.MonkeyPatch) -> None:
+    def order(adapter: Any, path: str, seed: int) -> list[str]:
+        return ["a", "victim"]
+
+    def in_order(adapter: Any, path: str, ids: list[str], seed: int) -> list[dict[str, Any]]:
+        return [{"id": "victim", "passed": False}]
+
+    monkeypatch.setattr(execution, "order", order)
+    monkeypatch.setattr(execution, "in_order", in_order)
+    culprits = Bisect(Adapter(), "test_x.py", 1)("victim")  # type: ignore[arg-type]
+    assert (culprits.ids, culprits.alone) == ([], True)
+
+
+def test_runs_that_write_no_results_break_the_bisect(monkeypatch: pytest.MonkeyPatch) -> None:
+    def order(adapter: Any, path: str, seed: int) -> list[str]:
+        return ["a", "victim"]
+
+    def in_order(adapter: Any, path: str, ids: list[str], seed: int) -> list[dict[str, Any]]:
+        raise execution.NoResults("test_x.py", "", "crashed")
+
+    monkeypatch.setattr(execution, "order", order)
+    monkeypatch.setattr(execution, "in_order", in_order)
+    monkeypatch.setattr(execution, "retrying", lambda attempt: attempt())
+    culprits = Bisect(Adapter(), "test_x.py", 1)("victim")  # type: ignore[arg-type]
+    assert (culprits.ids, culprits.broken) == ([], True)
+
+
+@pytest.mark.parametrize(
+    ("victim", "outcome"),
+    [
+        (None, "not_run"),
+        ({"skipped": True}, "skipped"),
+        ({"passed": False, "timed_out": True}, "interrupted"),
+        ({"passed": False, "expected_failure": True}, "expected_failure"),
+    ],
+)
+def test_what_became_of_the_victim_in_a_probe_is_kept(
+    monkeypatch: pytest.MonkeyPatch,
+    victim: dict[str, Any] | None,
+    outcome: str,
+) -> None:
+    def in_order(*arguments: Any, **options: Any) -> list[dict[str, Any]]:
+        culprit = {"id": "culprit", "environment_changes": ["environment:FLAG"]}
+
+        return [culprit] + ([] if victim is None else [{"id": "victim", **victim}])
+
+    monkeypatch.setattr(execution, "in_order", in_order)
+    causes, _ = environment_causes(Adapter(), "test_x.py", "victim", ["culprit"], 1, "boom")  # type: ignore[arg-type]
+    assert [cause.baseline for cause in causes] == [[outcome] * 2]
+
+
+def test_a_probe_that_writes_no_results_measures_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    def in_order(*arguments: Any, **options: Any) -> list[dict[str, Any]]:
+        raise execution.NoResults("test_x.py", "", "crashed")
+
+    monkeypatch.setattr(execution, "in_order", in_order)
+    assert environment_causes(Adapter(), "test_x.py", "victim", ["culprit"], 1, "boom") == ([], False)  # type: ignore[arg-type]

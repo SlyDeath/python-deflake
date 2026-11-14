@@ -596,3 +596,40 @@ def test_a_member_that_cannot_be_signalled_keeps_no_other_process_alive(
 
     assert stopped == [125]
     assert killed == [124, 125, 123, 200]
+
+
+def test_rows_of_the_registry_that_name_no_process_are_skipped(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    registry = tmp_path / "processes"
+    execution.events.append(registry, pid=0, identity="birth")
+    execution.events.append(registry, pid="125", identity="birth")
+    execution.events.append(registry, pid=126)
+    execution.events.append(registry, pid=127, identity="birth")
+    monkeypatch.setattr(execution.events, "process_identity", lambda pid: "birth")
+    monkeypatch.setattr(os, "getpgid", lambda pid: 456)
+    killed: list[int] = []
+    monkeypatch.setattr(execution, "signal_owned", lambda pid, identity, number: killed.append(pid))
+    execution.stop_descendants(registry)
+    assert killed == [127]
+
+
+def test_a_process_that_is_gone_leads_no_group(monkeypatch: pytest.MonkeyPatch) -> None:
+    def getpgid(pid: int) -> int:
+        raise ProcessLookupError
+
+    monkeypatch.setattr(os, "getpgid", getpgid)
+    assert not execution.leads_group(123)
+
+
+def test_a_process_that_wrote_no_rows_is_not_complete() -> None:
+    outcome = execution.Outcome(
+        rows=None,
+        outside=[],
+        status=execution.Status(1),
+        success=False,
+        output="Traceback",
+    )
+    with pytest.raises(execution.NoResults, match=r"test_x\.py produced no test results"):
+        execution.complete(outcome, "test_x.py")

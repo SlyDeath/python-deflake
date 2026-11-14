@@ -37,17 +37,18 @@ jobs:
             pytest: "8.0"
             django: "5.2"
             os: ubuntu-latest
-          # Coverage is measured once, on the newest stable Python
+          # Coverage is measured on the newest stable Python
           - python: "3.14"
             pytest: "9"
             django: "6.1"
             os: ubuntu-latest
             coverage: true
-          # macOS signals processes through its own API
+          # macOS signals processes through its own API, measured too so that code counts as covered
           - python: "3.11"
             pytest: "9"
             django: "5.2"
             os: macos-latest
+            coverage: true
     steps:
       - uses: actions/checkout@v5
         with:
