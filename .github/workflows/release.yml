@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]*"]
+
+jobs:
+  # A tag can point at a commit that never went green, so check it again here
+  checks:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
+  release:
+    needs: checks
+    runs-on: ubuntu-latest
+    environment: release
+    # contents: write lets the last step create the GitHub release; id-token: write is for PyPI's trusted publishing
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+      - name: Check that the tag matches the version
+        run: |
+          version=$(uv version --short)
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match version $version in pyproject.toml"
+            exit 1
+          fi
+      - run: uv build
+      - name: Check that the packages hold only the package and its documents
+        run: |
+          if tar tzf dist/*.tar.gz | cut -d/ -f2- | grep -Ev '^$|/$|^(src/deflake/.+|PKG-INFO|README\.md|CHANGELOG\.md|LICENSE\.txt|pyproject\.toml|\.gitignore)$'; then
+            echo "::error::The sdist holds files it should not"
+            exit 1
+          fi
+          if unzip -Z1 dist/*.whl | grep -Ev '^(deflake/.+|deflake_py-[^/]+\.dist-info/.+)$'; then
+            echo "::error::The wheel holds files it should not"
+            exit 1
+          fi
+          unzip -Z1 dist/*.whl | grep -qx 'deflake/django/runner.py'
+      - run: uv publish --trusted-publishing always
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # The notes are the CHANGELOG section of this version
+        run: |
+          awk -v v="${GITHUB_REF_NAME#v}" '/^## \[/ { p = index($0, "[" v "]") } p && !/^## \[/' CHANGELOG.md > notes.md
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md --verify-tag dist/*

@@ -1,0 +1,362 @@
+{
+  "validated_on": "2026-11-13",
+  "protocol": {
+    "python": "3.11.17",
+    "pytest": "8.4.2",
+    "seeds": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "runner": "pytest",
+    "scope": "Historical known victim/polluter test selections, not full-project suites. Humanize additionally runs the complete i18n file while focusing diagnosis on the known victim.",
+    "causal_controls": "Two baseline, two single-value repairs, two repair-and-reapplications, each in a fresh process.",
+    "secret_values": "No environment or module values are included in causal evidence.",
+    "parent_seed_override": "random.sample = lambda population, count: list(range(count)); applied only in the parent CLI process for reproducible seed selection"
+  },
+  "cases": [
+    {
+      "project": "securenative",
+      "repository": "https://github.com/securenative/securenative-python",
+      "buggy_revision": "0eae99733b7565341487ad32f044be8dc51032cd",
+      "versions": {
+        "python": "3.11.17",
+        "pytest": "8.4.2"
+      },
+      "buggy": [
+        {
+          "id": "tests/configuration_manager_test.py::ConfigurationManagerTest::test_default_values_for_invalid_enum_config_props",
+          "verdict": "order_dependent",
+          "runs": {
+            "total": 8,
+            "failures": 4,
+            "failure_rate": 0.5,
+            "skipped": 0
+          },
+          "confirmed_causes": [
+            {
+              "culprit": "tests/configuration_manager_test.py::ConfigurationManagerTest::test_get_config_from_env_variables",
+              "key": "SECURENATIVE_FAILOVER_STRATEGY",
+              "seed": 0,
+              "baseline": [
+                "same_failure",
+                "same_failure"
+              ],
+              "repair": [
+                "passed",
+                "passed"
+              ],
+              "reapply": [
+                "same_failure",
+                "same_failure"
+              ],
+              "detector": "environment",
+              "confirmed": true
+            }
+          ],
+          "leak_messages": 1
+        },
+        {
+          "id": "tests/configuration_manager_test.py::ConfigurationManagerTest::test_get_config_from_env_variables",
+          "verdict": "fails_on_its_own",
+          "runs": {
+            "total": 8,
+            "failures": 4,
+            "failure_rate": 0.5,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 9
+        }
+      ],
+      "fixed": [
+        {
+          "id": "tests/configuration_manager_test.py::ConfigurationManagerTest::test_default_values_for_invalid_enum_config_props",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 10
+        },
+        {
+          "id": "tests/configuration_manager_test.py::ConfigurationManagerTest::test_get_config_from_env_variables",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 10
+        }
+      ],
+      "fix": {
+        "kind": "published_research_patches_not_claimed_as_merged_upstream",
+        "urls": [
+          "https://github.com/ailen-wrx/ipflakies_artifact/blob/2aba916debf2ee8c1e0f09dea2a6b06ab8e626b4/ipflakies_result/securenative-python/ipflakies_result/4753ddcd/patch/configuration_manager_test_patch_b2dc9c4e.patch",
+          "https://github.com/ailen-wrx/ipflakies_artifact/blob/2aba916debf2ee8c1e0f09dea2a6b06ab8e626b4/ipflakies_result/securenative-python/ipflakies_result/4bacd6a2/patch/configuration_manager_test_patch_acf197d5.patch"
+        ],
+        "dataset": "https://github.com/ailen-wrx/ipflakies_artifact/blob/2aba916debf2ee8c1e0f09dea2a6b06ab8e626b4/summary/Patches.csv"
+      },
+      "adaptations": [
+        "Historical source tests selected with pytest -k; pytest 8 replaces the original unsupported pytest version.",
+        "Move only the test INI path from /tmp/securenative.ini into this isolated checkout; apply both published patches for the victim and its brittle polluter."
+      ],
+      "interpretation": "The known victim becomes stable after the published fix. Remaining leak messages may keep exit status 1; stable does not mean leak-free.",
+      "command_template": "python -m deflake TEST_FILE --runner pytest -n 8 -t 25 -f json"
+    },
+    {
+      "project": "model-sdk",
+      "repository": "https://github.com/runwayml/model-sdk",
+      "buggy_revision": "3132b2ab424f1020e8d30e4897057103ab3e6623",
+      "versions": {
+        "python": "3.11.17",
+        "pytest": "8.4.2"
+      },
+      "buggy": [
+        {
+          "id": "tests/test_model.py::test_gpu_in_manifest_gpu_env_true",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 1
+        },
+        {
+          "id": "tests/test_model.py::test_model_setup_and_command",
+          "verdict": "order_dependent",
+          "runs": {
+            "total": 8,
+            "failures": 4,
+            "failure_rate": 0.5,
+            "skipped": 0
+          },
+          "confirmed_causes": [
+            {
+              "culprit": "tests/test_model.py::test_gpu_in_manifest_gpu_env_true",
+              "key": "GPU",
+              "seed": 0,
+              "baseline": [
+                "same_failure",
+                "same_failure"
+              ],
+              "repair": [
+                "passed",
+                "passed"
+              ],
+              "reapply": [
+                "same_failure",
+                "same_failure"
+              ],
+              "detector": "environment",
+              "confirmed": true
+            }
+          ],
+          "leak_messages": 0
+        }
+      ],
+      "fixed": [
+        {
+          "id": "tests/test_model.py::test_gpu_in_manifest_gpu_env_true",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 1
+        },
+        {
+          "id": "tests/test_model.py::test_model_setup_and_command",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 1
+        }
+      ],
+      "fix": {
+        "kind": "published_research_patches_not_claimed_as_merged_upstream",
+        "urls": [
+          "https://github.com/ailen-wrx/ipflakies_artifact/blob/2aba916debf2ee8c1e0f09dea2a6b06ab8e626b4/ipflakies_result/model-sdk/ipflakies_result/4ba9ba3a/patch/test_model_patch_0d256c9c.patch"
+        ],
+        "dataset": "https://github.com/ailen-wrx/ipflakies_artifact/blob/2aba916debf2ee8c1e0f09dea2a6b06ab8e626b4/summary/Patches.csv"
+      },
+      "adaptations": [
+        "Historical source tests selected with pytest -k; pytest 8 replaces the original unsupported pytest version.",
+        "Use Flask 1.1.4, MarkupSafe 2.0.1, pytest-cov 2.12.1 and NumPy 1.26.4 for the historical test API."
+      ],
+      "interpretation": "The known victim becomes stable after the published fix. Remaining leak messages may keep exit status 1; stable does not mean leak-free.",
+      "command_template": "python -m deflake TEST_FILE --runner pytest -n 8 -t 25 -f json"
+    },
+    {
+      "project": "humanize",
+      "repository": "https://github.com/python-humanize/humanize",
+      "buggy_revision": "c5dcf109d1bf358cf29ecda15f7f640e52ecf704",
+      "versions": {
+        "python": "3.11.17",
+        "pytest": "8.4.2"
+      },
+      "buggy": [
+        {
+          "id": "tests/test_i18n.py::test_default_locale_path_defined__file__",
+          "verdict": "order_dependent",
+          "runs": {
+            "total": 8,
+            "failures": 4,
+            "failure_rate": 0.5,
+            "skipped": 0
+          },
+          "confirmed_causes": [
+            {
+              "culprit": "tests/test_i18n.py::test_default_locale_path_null__file__",
+              "key": "humanize.i18n.__file__",
+              "seed": 1,
+              "baseline": [
+                "same_failure",
+                "same_failure"
+              ],
+              "repair": [
+                "passed",
+                "passed"
+              ],
+              "reapply": [
+                "same_failure",
+                "same_failure"
+              ],
+              "detector": "module",
+              "confirmed": true
+            }
+          ],
+          "leak_messages": 0
+        },
+        {
+          "id": "tests/test_i18n.py::test_default_locale_path_null__file__",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 1
+        }
+      ],
+      "fixed": [
+        {
+          "id": "tests/test_i18n.py::test_default_locale_path_defined__spec__",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 0
+        },
+        {
+          "id": "tests/test_i18n.py::test_default_locale_path_none__spec__",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 0
+        }
+      ],
+      "fix": {
+        "kind": "upstream_commit",
+        "url": "https://github.com/python-humanize/humanize/commit/96276945545972edfe462ed9809719f931c27b56"
+      },
+      "adaptations": [
+        "Editable source installation and targeted pytest collection; no test body changes.",
+        "The upstream fix renames __file__ tests to __spec__ tests.",
+        "Compile translation catalogs with the project script for the complete-file run."
+      ],
+      "full_file_focused_buggy": [
+        {
+          "id": "tests/test_i18n.py::test_default_locale_path_defined__file__",
+          "verdict": "order_dependent",
+          "runs": {
+            "total": 8,
+            "failures": 7,
+            "failure_rate": 0.875,
+            "skipped": 0
+          },
+          "confirmed_causes": [
+            {
+              "culprit": "tests/test_i18n.py::TestActivate::test_default_locale_path_undefined__file__",
+              "key": "humanize.i18n.__file__",
+              "seed": 0,
+              "baseline": [
+                "same_failure",
+                "same_failure"
+              ],
+              "repair": [
+                "passed",
+                "passed"
+              ],
+              "reapply": [
+                "same_failure",
+                "same_failure"
+              ],
+              "detector": "module",
+              "confirmed": true
+            }
+          ],
+          "leak_messages": 0
+        }
+      ],
+      "full_file_focused_fixed": [
+        {
+          "id": "tests/test_i18n.py::test_default_locale_path_defined__spec__",
+          "verdict": "stable",
+          "runs": {
+            "total": 8,
+            "failures": 0,
+            "failure_rate": 0.0,
+            "skipped": 0
+          },
+          "confirmed_causes": [],
+          "leak_messages": 0
+        }
+      ],
+      "interpretation": "The known victim becomes stable after the published fix. Remaining leak messages may keep exit status 1; stable does not mean leak-free.",
+      "command_template": "python -m deflake TEST_FILE --runner pytest -n 8 -t 25 -f json",
+      "full_file_collected_tests": 28
+    }
+  ],
+  "unvalidated_attempts": [
+    {
+      "project": "Skipper",
+      "repository": "https://github.com/Stratoscale/skipper",
+      "revision": "dde3194bf6cf227b30c6e54b18c37317d2e0647e",
+      "reason": "Collection failed because the historical project imports pkg_resources, which is absent from its isolated modern setuptools installation. No flaky detection or causal result is claimed for this attempt."
+    }
+  ]
+}

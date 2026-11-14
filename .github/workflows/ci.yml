@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # The release workflow runs the same checks before it publishes
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Python ${{ matrix.python }} / pytest ${{ matrix.pytest }} / Django ${{ matrix.django }} / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python: ["3.11", "3.12", "3.13", "3.14", "3.15"]
+        pytest: ["8", "9"]
+        django: ["5.2", "6.0", "6.1"]
+        exclude:
+          # Django 6.0 and newer need Python 3.12 or newer
+          - python: "3.11"
+            django: "6.0"
+          - python: "3.11"
+            django: "6.1"
+        include:
+          # The oldest pytest deflake supports
+          - python: "3.11"
+            pytest: "8.0"
+            django: "5.2"
+            os: ubuntu-latest
+          # macOS signals processes through its own API
+          - python: "3.11"
+            pytest: "9"
+            django: "5.2"
+            os: macos-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked
+      - run: uv pip install "pytest==${{ matrix.pytest }}.*" "django==${{ matrix.django }}.*"
+      - run: uv run --no-sync pytest
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v7
+      - run: uv sync --locked
+      - run: uv run --no-sync ruff check
+      - run: uv run --no-sync ruff format --check
+      - run: uv run --no-sync mypy
