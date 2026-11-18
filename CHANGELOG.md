@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.1.1] - 2026-11-18
+
+- Test each added LocMemCache entry independently and report its alias and full stored key.
+- Require an observed victim outcome when checking a culprit and report inconclusive isolation when every run skips.
+- Handle non-UTF-8 Linux process names and select the nearest test above a line in linear time.
+
 ## [0.1.0]
 
 First public release.

@@ -1,6 +1,6 @@
 [project]
 name = "deflake-py"
-version = "0.1.0"
+version = "0.1.1"
 description = "Find flaky tests in pytest, unittest and Django and explain why they fail."
 readme = "README.md"
 license = "MIT"

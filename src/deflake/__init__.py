@@ -3,4 +3,4 @@
 The test processes deflake starts import this package too, so it imports nothing itself
 """
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
