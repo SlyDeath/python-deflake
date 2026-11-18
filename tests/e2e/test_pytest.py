@@ -1080,3 +1080,19 @@ def test_a_change_of_a_wider_fixture_is_not_proven_a_cause_of_the_test_that_set_
     assert victim["culprits"], result.out
     # The leak is shown as the fixture's, outside of its tests: test_a_uses did not make it
     assert not any(cause["key"] == "WIDE_FLAG" for cause in victim["causes"]), result.out
+
+
+def test_victim_skipped_in_isolation_has_no_proven_culprit(project: Project, deflake: Deflake) -> None:
+    root = project("pytest_regressions")
+    (root / "test_gate.py").write_text(
+        "import os\nimport pytest\n"
+        "def test_a_gate():\n    os.environ['DEFLAKE_TEST_GATE'] = 'open'\n"
+        "def test_b_victim():\n"
+        "    if 'DEFLAKE_TEST_GATE' not in os.environ:\n        pytest.skip('closed')\n"
+        "    assert False, 'independent failure'\n"
+    )
+    result = deflake("test_gate.py", "-n", "1", "-f", "json", cwd=root)
+    victim = next(test for test in result.json if test["name"] == "test_b_victim")
+    assert victim["isolated_runs"]["skipped"] == 1
+    assert victim["verdict"] == "failed"
+    assert not victim["culprits"]

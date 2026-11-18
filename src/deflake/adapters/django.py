@@ -6,9 +6,7 @@ import shlex
 import sys
 from pathlib import Path
 
-from deflake.adapters import Row
-from deflake.adapters.pytest import by_line
-from deflake.adapters.unittest import Unittest, by_name
+from deflake.adapters.unittest import Unittest
 
 RUNNER = "deflake.django.Runner"
 
@@ -24,12 +22,6 @@ class Django(Unittest):
 
     def reproduce(self, path: str, seed: int) -> str:
         return f"DEFLAKE_SEED={seed} python manage.py test --testrunner {RUNNER} {shlex.quote(label(path))}"
-
-    def focus(self, path: str, selector: str, listed: list[Row]) -> list[str]:
-        if selector.isdigit():
-            return by_line(path, int(selector), listed)
-
-        return by_name(path, selector, listed)
 
 
 def label(path: str) -> str:

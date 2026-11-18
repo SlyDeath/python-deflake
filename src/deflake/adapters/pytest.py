@@ -62,7 +62,9 @@ def by_line(path: str, line: int, rows: list[Row]) -> list[str]:
     if not above:
         raise Error(f"no test found at {path}:{line}")
 
-    return [row["listed"] for row in rows if row["line"] == max(above)]
+    nearest = max(above)
+
+    return [row["listed"] for row in rows if row["line"] == nearest]
 
 
 def by_name(path: str, name: str, rows: list[Row]) -> list[str]:

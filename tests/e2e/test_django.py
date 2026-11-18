@@ -21,7 +21,7 @@ def test_finds_the_culprit_of_an_order_dependent_test(project: Project, deflake:
     assert "culprit: CacheTest.test_pollutes\n" in victim
     assert "python manage.py test --testrunner deflake.django.Runner shop/tests.py" in victim
     assert "AssertionError: 50 is not None\n      at tests.py:12" in victim
-    assert "  leaks: cache 'default' has new keys: discount (20 of 20 runs)\n" in result.out
+    assert "  leaks: cache entry ('default', ':1:discount') was added (20 of 20 runs)\n" in result.out
 
 
 def test_reproduce_command_shows_the_failure(project: Project, deflake: Deflake) -> None:

@@ -94,7 +94,7 @@ class Bisect:
     def pinned(self, candidates: list[str], victim: str) -> list[str]:
         """Smaller steps ran once each, so the end result must break the victim again. A victim that
         fails only now and then can also pass a step by chance and keep a test that has nothing to do
-        with it: each culprit must be needed, the victim passing every time without it"""
+        with it: without each culprit the victim must run without that failure every time"""
         culprits = minimize(candidates, lambda tests: self.fails(tests, victim))
         if not culprits or not self.fails(culprits, victim, CONFIRM):
             return []
@@ -102,7 +102,7 @@ class Bisect:
         needed = [
             culprit
             for culprit in culprits
-            if not self.fails_ever([c for c in culprits if c != culprit], victim, NEEDED)
+            if self.without_original_failure([c for c in culprits if c != culprit], victim, NEEDED)
         ]
         if needed == culprits:
             return culprits
@@ -145,9 +145,15 @@ class Bisect:
 
         return True
 
-    def fails_ever(self, tests: list[str], victim: str, times: int) -> bool:
-        """Whether the victim fails in any of these runs"""
-        return any(self.fails(tests, victim) for _ in range(times))
+    def without_original_failure(self, tests: list[str], victim: str, times: int) -> bool:
+        """Check the victim reached a recorded outcome other than the target failure in every run"""
+        for _ in range(times):
+            rows = self.reaching(tests, victim)
+            row = next((row for row in rows if row["id"] == victim), {})
+            if row.get("passed") is None or row.get("skipped") or row.get("timed_out") or self.failed(row):
+                return False
+
+        return True
 
     def failed(self, row: execution.Row) -> bool:
         if row.get("passed") is not False or row.get("timed_out"):

@@ -63,8 +63,8 @@ def process_identity(pid: int) -> str | None:
                 return data.raw[120:136].hex()
         elif sys.platform.startswith("linux"):
             # Field 22 follows a comm field that can itself contain spaces and parentheses
-            state = Path(f"/proc/{pid}/stat").read_text()
-            return state.rsplit(")", 1)[1].split()[19]
+            state = Path(f"/proc/{pid}/stat").read_bytes()
+            return state.rsplit(b")", 1)[1].split()[19].decode("ascii")
     except (OSError, IndexError):
         return None
 

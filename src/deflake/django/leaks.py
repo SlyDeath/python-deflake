@@ -6,7 +6,6 @@ import ast
 import contextlib
 import copy
 import weakref
-from collections import Counter
 from typing import Any
 
 from django.conf import settings
@@ -49,6 +48,10 @@ class Settings:
         return messages
 
 
+def cache_key(alias: str, key: str) -> str:
+    return f"cache entry {(alias, key)!r}"
+
+
 class Caches:
     """Keys added to a local memory cache; other backends live outside of the process"""
 
@@ -71,13 +74,8 @@ class Caches:
         messages = []
         for alias, keys in after.items():
             old = before.get(alias, set())
-            added = keys - old
-            if added:
-                # Shorten only for display; versions and prefixes distinguish stored keys
-                labels = {key: key.split(":", 2)[-1] for key in keys | old}
-                counts = Counter(labels.values())
-                names = [key if counts[labels[key]] > 1 else labels[key] for key in added]
-                messages.append(f"cache {alias!r} has new keys: {', '.join(sorted(names))}")
+            for key in sorted(keys - old):
+                messages.append(f"{cache_key(alias, key)} was added")
 
         return messages
 
@@ -125,7 +123,9 @@ class State(states.Pieces):
 
         for alias, cache in local_caches().items():
             store, expiry = cache._cache, cache._expire_info
-            state[f"cache {alias!r}"] = ((dict(store), dict(expiry)), set(store))
+            with cache._lock:
+                for key, value in store.items():
+                    state[cache_key(alias, key)] = ((value, expiry[key]), True)
 
         for name, signal in SIGNALS.items():
             # Told apart as the leaks are, by the receivers still alive
@@ -135,7 +135,7 @@ class State(states.Pieces):
         return state
 
     def default(self, name: str) -> Any:
-        if name.startswith("settings."):
+        if name.startswith(("settings.", "cache entry ")):
             return MISSING
 
         return super().default(name)
@@ -174,14 +174,16 @@ class State(states.Pieces):
                 signal.receivers[:] = [*value, *(receiver for receiver in own if receiver not in value)]
                 # The receivers of each sender are cached until the receivers change
                 signal.sender_receivers_cache.clear()
-        elif name.startswith("cache "):
-            cache = local_caches()[ast.literal_eval(name.removeprefix("cache "))]
-            store, expiry = value
+        elif name.startswith("cache entry "):
+            alias, key = ast.literal_eval(name.removeprefix("cache entry "))
+            cache = local_caches()[alias]
             with cache._lock:
-                cache._cache.clear()
-                cache._cache.update(store)
-                cache._expire_info.clear()
-                cache._expire_info.update(expiry)
+                if value is MISSING:
+                    cache._cache.pop(key, None)
+                    cache._expire_info.pop(key, None)
+                else:
+                    cache._cache[key], cache._expire_info[key] = value
+                    cache._cache.move_to_end(key, last=False)
         else:
             raise ValueError(f"no state named {name}")
 

@@ -45,5 +45,13 @@ def test_process_birth_identity_is_stable_for_a_live_process():
 def test_linux_birth_identity_handles_parentheses_in_process_names(monkeypatch):
     state = "123 (worker (service)) " + " ".join(["S", *(["0"] * 18), "98765", "0"])
     monkeypatch.setattr(events.sys, "platform", "linux")
-    monkeypatch.setattr(Path, "read_text", lambda self: state)
+    monkeypatch.setattr(Path, "read_bytes", lambda self: state.encode())
+    assert events.process_identity(123) == "98765"
+
+
+def test_non_utf8_linux_comm_does_not_hide_birth_identity(tmp_path, monkeypatch):
+    stat = tmp_path / "stat"
+    stat.write_bytes(b"123 (x\xff) " + b"S " + b"0 " * 18 + b"98765 0")
+    monkeypatch.setattr(events.sys, "platform", "linux")
+    monkeypatch.setattr(events, "Path", lambda path: stat)
     assert events.process_identity(123) == "98765"

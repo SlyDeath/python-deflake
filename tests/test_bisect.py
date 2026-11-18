@@ -338,3 +338,13 @@ def test_a_probe_that_writes_no_results_measures_nothing(monkeypatch: pytest.Mon
 
     monkeypatch.setattr(execution, "in_order", in_order)
     assert environment_causes(Adapter(), "test_x.py", "victim", ["culprit"], 1, "boom") == ([], False)  # type: ignore[arg-type]
+
+
+def test_skipped_victim_does_not_pin_a_culprit(monkeypatch):
+    search = Bisect(Adapter(), "test_x.py", 0)
+    monkeypatch.setattr(
+        search,
+        "reaching",
+        lambda tests, victim: [{"id": victim, "passed": False} if tests else {"id": victim, "skipped": True}],
+    )
+    assert search.pinned(["gate"], "victim") == []

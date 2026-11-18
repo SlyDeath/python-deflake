@@ -18,14 +18,14 @@ def test_a_cache_first_used_in_a_worker_leaks(project: Project, deflake: Deflake
     assert result.code == 1, result.out + result.err
     test = next(test for test in result.json if test["name"] == "test_thread_cache")
     assert test["runs"]["failures"] == 0
-    assert test["leaks"] == [{"message": "cache 'default' has new keys: feature", "runs": 1}]
+    assert test["leaks"] == [{"message": "cache entry ('default', ':2:feature') was added", "runs": 1}]
 
 
 def test_a_new_cache_key_version_is_a_leak(project: Project, deflake: Deflake) -> None:
     result = deflake("test_cache_versions.py", "-n", "1", "-f", "json", cwd=project("pytest_django"))
     assert result.code == 1, result.out + result.err
     test = next(test for test in result.json if test["name"] == "test_new_version")
-    assert test["leaks"] == [{"message": "cache 'default' has new keys: :2:feature", "runs": 1}]
+    assert test["leaks"] == [{"message": "cache entry ('default', ':2:feature') was added", "runs": 1}]
 
 
 def test_tests_keep_the_order_of_their_kind(project: Project, deflake: Deflake) -> None:
@@ -86,7 +86,8 @@ def test_django_without_pytest_django_keeps_the_database(project: Project, defla
     )
     result = deflake("test_cache.py", "-n", "2", cwd=root)
     assert result.out == (
-        "test_cache: failed 0 of 2 runs (0%)\n  leaks: cache 'default' has new keys: a (2 of 2 runs)\n"
+        "test_cache: failed 0 of 2 runs (0%)\n"
+        "  leaks: cache entry ('default', ':1:a') was added (2 of 2 runs)\n"
     ), result.out + result.err
     # The project's own database is never opened
     assert not (root / "db.sqlite3").exists()

@@ -480,7 +480,7 @@ class Diagnosis:
         failed: it could not be run alone, or every run of the bisect broke before it"""
         if self.file_runs.failures == 0:
             return "stable"
-        if self.isolated_runs is None:
+        if self.isolated_runs is None or self.isolated_runs.total == 0:
             return "failed"
         if self.fails_alone:
             return "fails_on_its_own"

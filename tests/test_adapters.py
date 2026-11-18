@@ -31,3 +31,19 @@ def test_an_unknown_runner_is_an_error() -> None:
 
 def test_a_file_that_cannot_be_read_reads_as_empty(tmp_path: Path) -> None:
     assert adapters.read(tmp_path / "missing.py") == ""
+
+
+def test_line_fallback_scans_for_the_nearest_line_once(monkeypatch):
+    from deflake.adapters import pytest as adapter
+
+    scans = []
+
+    def maximum(lines):
+        scans.append(len(lines))
+
+        return max(lines)
+
+    monkeypatch.setattr(adapter, "max", maximum, raising=False)
+    rows = [{"file": __file__, "listed": i, "line": 2, "end": 2, "groups": []} for i in range(10)]
+    assert adapter.by_line(__file__, 3, rows) == list(range(10))
+    assert len(scans) <= 1

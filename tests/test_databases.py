@@ -117,8 +117,9 @@ BROKEN = textwrap.dedent(
 
 
     leaks.caches = Broken()
+    caches["default"].set("probe", 1)
     state = leaks.State().read()
-    assert "cache 'default'" in state and "settings.CACHES" in state, sorted(state)
+    assert "cache entry ('default', ':1:probe')" in state and "settings.CACHES" in state, sorted(state)
     """
 )
 

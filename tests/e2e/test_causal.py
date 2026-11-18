@@ -354,7 +354,10 @@ def test_a_patch_or_frozen_time_left_started_is_confirmed_as_the_cause(project: 
 
 
 DJANGO_CAUSES = {
-    "cache 'default'": ("cache.set('discount', 50)", "self.assertIsNone(cache.get('discount'))"),
+    "cache entry ('default', ':1:discount')": (
+        "cache.set('discount', 50)",
+        "self.assertIsNone(cache.get('discount'))",
+    ),
     "settings.FEATURE_FLAG": (
         "settings.FEATURE_FLAG = True\n        assert settings.FEATURE_FLAG",
         "self.assertFalse(getattr(settings, 'FEATURE_FLAG', False))",
@@ -402,3 +405,35 @@ def test_state_of_django_is_confirmed_as_the_cause(project: Project, state: str)
     assert any(
         cause["detector"] == "django" and cause["key"] == state and cause["confirmed"] for cause in causes
     ), causes
+
+
+def test_added_cache_key_does_not_repair_an_existing_key(project):
+    root = project("django")
+    path = "shop/test_cache_cause.py"
+    (root / path).write_text(
+        "from django.test import SimpleTestCase\nfrom django.core.cache import cache\n"
+        "cache.set('old', 'good', None)\n"
+        "class Cause(SimpleTestCase):\n"
+        "    def test_a_pollutes(self):\n        cache.set('new', 1, None)\n"
+        "        cache.set('old', 'bad', None)\n"
+        "    def test_b_victim(self):\n        self.assertEqual(cache.get('old'), 'good')\n"
+    )
+    causes = run(root, "django", path)
+    assert causes and all(not cause["confirmed"] for cause in causes)
+
+
+def test_only_the_causal_added_cache_version_is_confirmed(project):
+    root = project("django")
+    path = "shop/test_cache_versions.py"
+    (root / path).write_text(
+        "from django.test import SimpleTestCase\nfrom django.core.cache import cache\n"
+        "class Cause(SimpleTestCase):\n"
+        "    def test_a_pollutes(self):\n        cache.set('feature', 1, version=1)\n"
+        "        cache.set('feature', 2, version=2)\n"
+        "    def test_b_victim(self):\n        self.assertIsNone(cache.get('feature', version=2))\n"
+    )
+    causes = run(root, "django", path)
+    assert {cause["key"]: cause["confirmed"] for cause in causes} == {
+        "cache entry ('default', ':1:feature')": False,
+        "cache entry ('default', ':2:feature')": True,
+    }
